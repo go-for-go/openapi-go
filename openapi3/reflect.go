@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/swaggest/jsonschema-go"
+	"github.com/go-for-go/jsonschema-go"
 	"github.com/swaggest/refl"
 )
 

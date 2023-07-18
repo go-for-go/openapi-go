@@ -1,12 +1,12 @@
-module github.com/swaggest/openapi-go
+module github.com/go-for-go/openapi-go
 
 go 1.18
 
 require (
-	github.com/bool64/dev v0.2.27
+	github.com/bool64/dev v0.2.28
+	github.com/go-for-go/jsonschema-go v0.0.0-20230718113718-b0414ca1adaf
 	github.com/stretchr/testify v1.8.2
-	github.com/swaggest/assertjson v1.8.0
-	github.com/swaggest/jsonschema-go v0.3.50
+	github.com/swaggest/assertjson v1.8.1
 	github.com/swaggest/refl v1.1.0
 	gopkg.in/yaml.v2 v2.4.0
 )

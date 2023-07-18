@@ -1,3 +1,8 @@
+## Important
+
+This fork is used for generation open-api from json-api GO structures
+
+
 # OpenAPI structures for Go
 
 <img align="right" width="250px" src="/resources/logo.png">

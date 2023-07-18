@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/go-for-go/jsonschema-go"
+	"github.com/go-for-go/openapi-go/openapi3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/swaggest/assertjson"
-	"github.com/swaggest/jsonschema-go"
-	"github.com/swaggest/openapi-go/openapi3"
 )
 
 type WeirdResp interface {

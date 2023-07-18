@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/swaggest/openapi-go/openapi3"
+	"github.com/go-for-go/openapi-go/openapi3"
 )
 
 func ExampleReflector_SetJSONResponse_http_basic_auth() {

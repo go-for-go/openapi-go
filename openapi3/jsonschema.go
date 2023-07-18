@@ -3,7 +3,7 @@ package openapi3
 import (
 	"strings"
 
-	"github.com/swaggest/jsonschema-go"
+	"github.com/go-for-go/jsonschema-go"
 )
 
 type toJSONSchemaContext struct {

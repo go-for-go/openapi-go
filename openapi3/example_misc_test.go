@@ -2,12 +2,12 @@ package openapi3_test
 
 import (
 	"fmt"
+	"github.com/go-for-go/jsonschema-go"
 	"net/http"
 	"reflect"
 
+	"github.com/go-for-go/openapi-go/openapi3"
 	"github.com/swaggest/assertjson"
-	"github.com/swaggest/jsonschema-go"
-	"github.com/swaggest/openapi-go/openapi3"
 )
 
 func ExampleReflector_options() {
