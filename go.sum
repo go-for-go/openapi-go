@@ -9,6 +9,8 @@ github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/go-for-go/jsonschema-go v0.0.0-20230718113718-b0414ca1adaf h1:MeZAYa2l61t1G1AsBUmNi+Ocup+3HW6ofazEiADEC0A=
 github.com/go-for-go/jsonschema-go v0.0.0-20230718113718-b0414ca1adaf/go.mod h1:cvqEx9+80F8YWpL/9aD7rydnudim0dqwMnPYgwoTXdw=
+github.com/go-for-go/jsonschema-go v0.1.0 h1:tsPLowcTUj8isiK8aJ25vxMvX2sh4/F9k4dPMzyTEFQ=
+github.com/go-for-go/jsonschema-go v0.1.0/go.mod h1:cvqEx9+80F8YWpL/9aD7rydnudim0dqwMnPYgwoTXdw=
 github.com/iancoleman/orderedmap v0.2.0 h1:sq1N/TFpYH++aViPcaKjys3bDClUEU7s5B+z6jq8pNA=
 github.com/iancoleman/orderedmap v0.2.0/go.mod h1:N0Wam8K1arqPXNWjMo21EXnBPOPp36vB07FNRdD2geA=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
