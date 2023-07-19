@@ -16,6 +16,9 @@ import (
 	"github.com/swaggest/refl"
 )
 
+var typeArray = jsonschema.SimpleType("array")
+var typeString = jsonschema.SimpleType("string")
+
 // Reflector builds OpenAPI Schema with reflected structures.
 type Reflector struct {
 	jsonschema.Reflector
@@ -95,7 +98,7 @@ func (r *Reflector) SetupRequest(oc OperationContext) error {
 		r.parseParametersIn(oc, oc.ReqPathMapping, ParameterInPath),
 		r.parseParametersIn(oc, oc.ReqCookieMapping, ParameterInCookie),
 		r.parseParametersIn(oc, oc.ReqHeaderMapping, ParameterInHeader),
-		r.parseRequestBody(oc, mimeJSON, oc.HTTPMethod, nil, tagJSON),
+		r.parseRequestBody(oc, mimeJSON, oc.HTTPMethod, nil, tagJSON, tagJSONAPI),
 		r.parseRequestBody(oc, mimeFormUrlencoded, oc.HTTPMethod, oc.ReqFormDataMapping, tagFormData, tagForm),
 	)
 }
@@ -111,6 +114,7 @@ func (r *Reflector) SetRequest(o *Operation, input interface{}, httpMethod strin
 
 const (
 	tagJSON            = "json"
+	tagJSONAPI         = "jsonapi"
 	tagFormData        = "formData"
 	tagForm            = "form"
 	mimeJSON           = "application/json"
@@ -374,7 +378,98 @@ func (r *Reflector) parseParametersIn(
 	return nil
 }
 
+func getType(schema jsonschema.SchemaOrBool) string {
+	if schema.TypeObject.Ref != nil {
+		return string(typeString)
+	}
+	if schema.TypeObject.Type != nil {
+
+		if len(schema.TypeObject.Type.SliceOfSimpleTypeValues) > 0 {
+			if *schema.TypeObject.Type.SliceOfSimpleTypeValues[0].Type().SimpleTypes == typeArray {
+				return string(typeArray)
+			}
+		}
+	}
+	return ""
+}
+
+func addRelationIntoIncluded(schema *jsonschema.Schema, ref *string) {
+	parent := schema.Parent
+
+	for parent.Parent != nil {
+		parent = parent.Parent
+	}
+	if _, ok := parent.Properties["included"]; !ok {
+		if parent.Properties == nil {
+			parent.Properties = map[string]jsonschema.SchemaOrBool{}
+		}
+		parent.Properties["included"] = jsonschema.SchemaOrBool{
+			TypeObject: &jsonschema.Schema{
+				Type: &jsonschema.Type{SimpleTypes: &typeArray},
+				Items: &jsonschema.Items{
+					SchemaOrBool: &jsonschema.SchemaOrBool{
+						TypeObject: &jsonschema.Schema{AnyOf: []jsonschema.SchemaOrBool{}},
+					},
+				},
+			},
+		}
+	}
+	parent.Properties["included"].TypeObject.Items.SchemaOrBool.TypeObject.AnyOf = append(parent.Properties["included"].TypeObject.Items.SchemaOrBool.TypeObject.AnyOf, jsonschema.SchemaOrBool{TypeObject: &jsonschema.Schema{
+		Ref: ref,
+	}})
+}
+
+func (r *Reflector) getExamplesByRef(ref string) (id string, ttype string) {
+	id = "string"
+	path := strings.Split(ref, "/")
+	if v, ok := r.SpecEns().ComponentsEns().SchemasEns().MapOfSchemaOrRefValues[path[len(path)-1]]; ok {
+		if v.Schema.Properties["id"].Schema.Example != nil {
+			t := *v.Schema.Properties["id"].Schema.Example
+			id = t.(string)
+		}
+		if v.Schema.Properties["type"].Schema.Example != nil {
+			t := *v.Schema.Properties["type"].Schema.Example
+			ttype = t.(string)
+		}
+	}
+	return
+}
+
+func (r *Reflector) rotateRelation(schema *jsonschema.Schema) (ref *string) {
+	if schema.Ref != nil {
+		ref = schema.Ref
+		schema.Ref = nil
+		id, ttype := r.getExamplesByRef(*ref)
+		schema.Properties = map[string]jsonschema.SchemaOrBool{
+			"type": {
+				TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &typeString}, Examples: []interface{}{ttype}},
+			},
+			"id": {
+				TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &typeString}, Examples: []interface{}{id}},
+			},
+		}
+	}
+	return ref
+}
+
 func (r *Reflector) collectDefinition(name string, schema jsonschema.Schema) {
+	if relationships, ok := schema.Properties["relationships"]; ok {
+		for _, v := range relationships.TypeObject.Properties {
+			if data, ok := v.TypeObject.Properties["data"]; ok {
+				switch getType(data) {
+				case string(typeArray):
+					if ref := r.rotateRelation(data.TypeObject.Items.SchemaOrBool.TypeObject); ref != nil {
+						addRelationIntoIncluded(&schema, ref)
+					}
+				case string(typeString):
+					if ref := r.rotateRelation(data.TypeObject); ref != nil {
+						addRelationIntoIncluded(&schema, ref)
+					}
+				}
+			}
+		}
+	}
+
 	if _, exists := r.SpecEns().ComponentsEns().SchemasEns().MapOfSchemaOrRefValues[name]; exists {
 		return
 	}
@@ -555,6 +650,7 @@ func (r *Reflector) parseJSONResponse(resp *Response, oc OperationContext) error
 		r.withOperation(oc, true, "body"),
 		jsonschema.RootRef,
 		jsonschema.DefinitionsPrefix("#/components/schemas/"),
+		jsonschema.PropertyNameTag(tagJSON, tagJSONAPI),
 		jsonschema.CollectDefinitions(r.collectDefinition),
 	)
 	if err != nil {
