@@ -13,6 +13,10 @@ github.com/go-for-go/jsonschema-go v0.1.0 h1:tsPLowcTUj8isiK8aJ25vxMvX2sh4/F9k4d
 github.com/go-for-go/jsonschema-go v0.1.0/go.mod h1:cvqEx9+80F8YWpL/9aD7rydnudim0dqwMnPYgwoTXdw=
 github.com/go-for-go/jsonschema-go v0.2.0 h1:YDC4xmSBntEvUxVfKO70YJtG4NJ7GyRuZMYUQxB9/uc=
 github.com/go-for-go/jsonschema-go v0.2.0/go.mod h1:cvqEx9+80F8YWpL/9aD7rydnudim0dqwMnPYgwoTXdw=
+github.com/go-for-go/jsonschema-go v0.2.1 h1:Zv9xt3G0yDPPyp1abkThSTcOCPnXVBio8ykM23GgOsw=
+github.com/go-for-go/jsonschema-go v0.2.1/go.mod h1:cvqEx9+80F8YWpL/9aD7rydnudim0dqwMnPYgwoTXdw=
+github.com/go-for-go/jsonschema-go v0.2.2 h1:6QDdDYOOOlFPU9MsfgsDEveaZpIRdXc2xYaa+rcNd2Y=
+github.com/go-for-go/jsonschema-go v0.2.2/go.mod h1:cvqEx9+80F8YWpL/9aD7rydnudim0dqwMnPYgwoTXdw=
 github.com/iancoleman/orderedmap v0.2.0 h1:sq1N/TFpYH++aViPcaKjys3bDClUEU7s5B+z6jq8pNA=
 github.com/iancoleman/orderedmap v0.2.0/go.mod h1:N0Wam8K1arqPXNWjMo21EXnBPOPp36vB07FNRdD2geA=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=

@@ -2,6 +2,7 @@ package openapi3_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -787,74 +788,53 @@ func TestReflector_jsonapi_simple(t *testing.T) {
 
 	require.NoError(t, r.SetJSONResponse(oc.Operation, new(req), http.StatusOK))
 	require.NoError(t, r.SpecEns().AddOperation(http.MethodGet, "/foo", *oc.Operation))
-
-	assertjson.EqualMarshal(t, []byte(`{
-  "openapi": "3.0.3",
-  "info": {
-    "title": "",
-    "version": ""
-  },
-  "paths": {
-    "/foo": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/Openapi3TestReq"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Openapi3TestReq": {
-        "type": "object",
-        "properties": {
-          "attributes": {
-            "properties": {
-              "email": {
-                "type": "string",
-                "example": "foo@bar.com"
-              },
-              "name": {
-                "type": "string",
-                "example": "Name Surname"
-              },
-              "phone": {
-                "type": "string",
-                "example": "+79264247038"
-              },
-              "picture": {
-                "type": "string",
-                "example": "data:image/jpeg;base64,QSkZJ...BAQAAA"
-              }
-            }
-          },
-          "id": {
-            "type": "string",
-            "example": "9d0989ca-940a-4441-bf55-63f21780c6ec"
-          },
-          "type": {
-            "type": "string",
-            "example": "user"
-          }
-        }
-      }
-    }
-  }
-}`), r.SpecEns())
+	b, _ := r.Spec.MarshalYAML()
+	fmt.Println(string(b))
+	assert.YAMLEqf(t, `openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+paths:
+  /foo:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap'
+          description: OK
+components:
+  schemas:
+    JsonschemaGoJsonApiWrap:
+      properties:
+        data:
+          $ref: '#/components/schemas/Openapi3TestReq'
+      type: object
+    Openapi3TestReq:
+      properties:
+        attributes:
+          properties:
+            email:
+              example: foo@bar.com
+              type: string
+            name:
+              example: Name Surname
+              type: string
+            phone:
+              example: "+79264247038"
+              type: string
+            picture:
+              example: data:image/jpeg;base64,QSkZJ...BAQAAA
+              type: string
+        id:
+          example: 9d0989ca-940a-4441-bf55-63f21780c6ec
+          type: string
+        type:
+          example: user
+          type: string
+      type: object
+`, string(b), "")
 }
 
 func TestReflector_jsonapi_relation(t *testing.T) {
@@ -898,19 +878,169 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Openapi3TestBooksResponse'
-                  included:
-                    items:
-                      anyOf:
-                      - $ref: '#/components/schemas/Openapi3TestRelatedAuthor'
-                      - $ref: '#/components/schemas/Openapi3TestShop'
-                    type: array
-                type: object
+                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap'
           description: OK
 components:
   schemas:
+    JsonschemaGoJsonApiWrap:
+      properties:
+        data:
+          $ref: '#/components/schemas/Openapi3TestBooksResponse'
+        included:
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/Openapi3TestShop'
+            - $ref: '#/components/schemas/Openapi3TestRelatedAuthor'
+          type: array
+      type: object
+    Openapi3TestBooksResponse:
+      properties:
+        attributes:
+          properties:
+            created_at:
+              format: date-time
+              type: string
+            title:
+              type: string
+            view_count:
+              type: integer
+        id:
+          type: string
+        relationships:
+          properties:
+            authors:
+              properties:
+                data:
+                  items:
+                    properties:
+                      id:
+                        example: string
+                        type: string
+                      type:
+                        example: author
+                        type: string
+                  nullable: true
+                  type: array
+            shop:
+              properties:
+                data:
+                  properties:
+                    id:
+                      example: 00000000-0000-0000-0000-000000000000
+                      type: string
+                    type:
+                      example: shop
+                      type: string
+        type:
+          example: books
+          type: string
+      type: object
+    Openapi3TestRelatedAuthor:
+      properties:
+        attributes:
+          properties:
+            name:
+              type: string
+        id:
+          type: string
+        relationships:
+          properties:
+            shops:
+              properties:
+                data:
+                  items:
+                    properties:
+                      id:
+                        example: 00000000-0000-0000-0000-000000000000
+                        type: string
+                      type:
+                        example: shop
+                        type: string
+                  nullable: true
+                  type: array
+        type:
+          example: author
+          type: string
+      type: object
+    Openapi3TestShop:
+      properties:
+        attributes:
+          properties:
+            address:
+              type: string
+            name:
+              type: string
+        id:
+          example: 00000000-0000-0000-0000-000000000000
+          type: string
+        type:
+          example: shop
+          type: string
+      type: object`, string(b), "")
+}
+
+func TestReflector_jsonapi_list(t *testing.T) {
+
+	type Shop struct {
+		ID      string `jsonapi:"primary,shop" example:"00000000-0000-0000-0000-000000000000"`
+		Name    string `jsonapi:"attr,name"`
+		Address string `jsonapi:"attr,address"`
+	}
+	type RelatedAuthor struct {
+		ID    string  `jsonapi:"primary,author"`
+		Name  string  `jsonapi:"attr,name"`
+		Shops []*Shop `jsonapi:"relation,shops"`
+	}
+	type BooksResponse struct {
+		ID        string           `jsonapi:"primary,books"`
+		Title     string           `jsonapi:"attr,title"`
+		Authors   []*RelatedAuthor `jsonapi:"relation,authors"`
+		Shop      Shop             `jsonapi:"relation,shop"`
+		CreatedAt time.Time        `jsonapi:"attr,created_at"`
+		ViewCount int              `jsonapi:"attr,view_count"`
+	}
+	type BooksList struct {
+		Data []*BooksResponse `json:"data"`
+	}
+
+	r := openapi3.Reflector{}
+	oc := openapi3.OperationContext{
+		Operation: &openapi3.Operation{},
+	}
+
+	require.NoError(t, r.SetJSONResponse(oc.Operation, new(BooksList), http.StatusOK))
+	require.NoError(t, r.SpecEns().AddOperation(http.MethodGet, "/foo", *oc.Operation))
+	b, _ := r.Spec.MarshalYAML()
+	assert.YAMLEqf(t, `openapi: 3.0.3
+info:
+  title: ""
+  version: ""
+paths:
+  /foo:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Openapi3TestBooksList'
+          description: OK
+components:
+  schemas:
+    Openapi3TestBooksList:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Openapi3TestBooksResponse'
+          nullable: true
+          type: array
+        included:
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/Openapi3TestShop'
+            - $ref: '#/components/schemas/Openapi3TestRelatedAuthor'
+          type: array
+      type: object
     Openapi3TestBooksResponse:
       properties:
         attributes:

@@ -61,6 +61,23 @@ func joinErrors(errs ...error) error {
 	return nil
 }
 
+type IncludedRefs struct {
+	Index []string
+	Refs  map[string]string
+}
+
+func (e *IncludedRefs) AddRef(ref string) {
+	path := strings.Split(ref, "/")
+	if e.Refs == nil {
+		e.Refs = make(map[string]string)
+	}
+	name := path[len(path)-1]
+	if _, ok := e.Refs[name]; !ok {
+		e.Index = append(e.Index, name)
+		e.Refs[name] = ref
+	}
+}
+
 // SpecEns ensures returned Spec is not nil.
 func (r *Reflector) SpecEns() *Spec {
 	if r.Spec == nil {
@@ -260,11 +277,11 @@ func (r *Reflector) parseParametersIn(
 	if refl.IsSliceOrMap(input) {
 		return nil
 	}
-
+	refs := &IncludedRefs{}
 	s, err := r.Reflect(input,
 		r.withOperation(oc, false, string(in)),
 		jsonschema.DefinitionsPrefix("#/components/schemas/"),
-		jsonschema.CollectDefinitions(r.collectDefinition),
+		jsonschema.CollectDefinitions(r.collectContainer(refs)),
 		jsonschema.PropertyNameMapping(propertyMapping),
 		jsonschema.PropertyNameTag(string(in), additionalTags...),
 		func(rc *jsonschema.ReflectContext) {
@@ -309,18 +326,19 @@ func (r *Reflector) parseParametersIn(
 			}
 
 			// Check if parameter is an JSON encoded object.
+			refs := &IncludedRefs{}
 			property := reflect.New(field.Type).Interface()
 			if refl.HasTaggedFields(property, tagJSON) {
 				propertySchema, err := r.Reflect(property,
 					r.withOperation(oc, false, string(in)),
 					jsonschema.DefinitionsPrefix("#/components/schemas/"),
-					jsonschema.CollectDefinitions(r.collectDefinition),
+					jsonschema.CollectDefinitions(r.collectContainer(refs)),
 					jsonschema.RootRef,
 				)
 				if err != nil {
 					return err
 				}
-
+				r.BuildIncluded(refs, propertySchema)
 				openapiSchema := SchemaOrRef{}
 				openapiSchema.FromJSONSchema(propertySchema.ToSchemaOrBool())
 				p.Schema = nil
@@ -393,32 +411,6 @@ func getType(schema jsonschema.SchemaOrBool) string {
 	return ""
 }
 
-func addRelationIntoIncluded(schema *jsonschema.Schema, ref *string) {
-	parent := schema.Parent
-
-	for parent.Parent != nil {
-		parent = parent.Parent
-	}
-	if _, ok := parent.Properties["included"]; !ok {
-		if parent.Properties == nil {
-			parent.Properties = map[string]jsonschema.SchemaOrBool{}
-		}
-		parent.Properties["included"] = jsonschema.SchemaOrBool{
-			TypeObject: &jsonschema.Schema{
-				Type: &jsonschema.Type{SimpleTypes: &typeArray},
-				Items: &jsonschema.Items{
-					SchemaOrBool: &jsonschema.SchemaOrBool{
-						TypeObject: &jsonschema.Schema{AnyOf: []jsonschema.SchemaOrBool{}},
-					},
-				},
-			},
-		}
-	}
-	parent.Properties["included"].TypeObject.Items.SchemaOrBool.TypeObject.AnyOf = append(parent.Properties["included"].TypeObject.Items.SchemaOrBool.TypeObject.AnyOf, jsonschema.SchemaOrBool{TypeObject: &jsonschema.Schema{
-		Ref: ref,
-	}})
-}
-
 func (r *Reflector) getExamplesByRef(ref string) (id string, ttype string) {
 	id = "string"
 	path := strings.Split(ref, "/")
@@ -451,33 +443,34 @@ func (r *Reflector) rotateRelation(schema *jsonschema.Schema) (ref *string) {
 	}
 	return ref
 }
-
-func (r *Reflector) collectDefinition(name string, schema jsonschema.Schema) {
-	if relationships, ok := schema.Properties["relationships"]; ok {
-		for _, v := range relationships.TypeObject.Properties {
-			if data, ok := v.TypeObject.Properties["data"]; ok {
-				switch getType(data) {
-				case string(typeArray):
-					if ref := r.rotateRelation(data.TypeObject.Items.SchemaOrBool.TypeObject); ref != nil {
-						addRelationIntoIncluded(&schema, ref)
-					}
-				case string(typeString):
-					if ref := r.rotateRelation(data.TypeObject); ref != nil {
-						addRelationIntoIncluded(&schema, ref)
+func (r *Reflector) collectContainer(refs *IncludedRefs) func(name string, schema jsonschema.Schema) {
+	return func(name string, schema jsonschema.Schema) {
+		if relationships, ok := schema.Properties["relationships"]; ok {
+			for _, v := range relationships.TypeObject.Properties {
+				if data, ok := v.TypeObject.Properties["data"]; ok {
+					switch getType(data) {
+					case string(typeArray):
+						if ref := r.rotateRelation(data.TypeObject.Items.SchemaOrBool.TypeObject); ref != nil {
+							refs.AddRef(*ref)
+						}
+					case string(typeString):
+						if ref := r.rotateRelation(data.TypeObject); ref != nil {
+							refs.AddRef(*ref)
+						}
 					}
 				}
 			}
 		}
+
+		if _, exists := r.SpecEns().ComponentsEns().SchemasEns().MapOfSchemaOrRefValues[name]; exists {
+			return
+		}
+
+		s := SchemaOrRef{}
+		s.FromJSONSchema(schema.ToSchemaOrBool())
+
+		r.SpecEns().ComponentsEns().SchemasEns().WithMapOfSchemaOrRefValuesItem(name, s)
 	}
-
-	if _, exists := r.SpecEns().ComponentsEns().SchemasEns().MapOfSchemaOrRefValues[name]; exists {
-		return
-	}
-
-	s := SchemaOrRef{}
-	s.FromJSONSchema(schema.ToSchemaOrBool())
-
-	r.SpecEns().ComponentsEns().SchemasEns().WithMapOfSchemaOrRefValuesItem(name, s)
 }
 
 func (r *Reflector) parseResponseHeader(resp *Response, oc OperationContext) error {
@@ -646,16 +639,18 @@ func (r *Reflector) parseJSONResponse(resp *Response, oc OperationContext) error
 		return nil
 	}
 
+	refs := &IncludedRefs{}
 	schema, err := r.Reflect(output,
 		r.withOperation(oc, true, "body"),
 		jsonschema.RootRef,
 		jsonschema.DefinitionsPrefix("#/components/schemas/"),
 		jsonschema.PropertyNameTag(tagJSON, tagJSONAPI),
-		jsonschema.CollectDefinitions(r.collectDefinition),
+		jsonschema.CollectDefinitions(r.collectContainer(refs)),
 	)
 	if err != nil {
 		return err
 	}
+	r.BuildIncluded(refs, schema)
 
 	oaiSchema := SchemaOrRef{}
 	oaiSchema.FromJSONSchema(schema.ToSchemaOrBool())
@@ -695,6 +690,36 @@ func (r *Reflector) withOperation(oc OperationContext, processingResponse bool, 
 		oc.ProcessingIn = in
 
 		rc.Context = context.WithValue(rc.Context, ocCtxKey{}, oc)
+	}
+}
+
+func (r Reflector) BuildIncluded(refs *IncludedRefs, schema jsonschema.Schema) {
+	if schema.Ref != nil && len(refs.Refs) > 0 {
+		path := strings.Split(*schema.Ref, "/")
+		ttype := SchemaTypeArray
+		if v, ok := r.SpecEns().ComponentsEns().SchemasEns().MapOfSchemaOrRefValues[path[len(path)-1]]; ok {
+			if v.Schema.Properties == nil {
+				v.Schema.Properties = map[string]SchemaOrRef{}
+			}
+			if _, ok := v.Schema.Properties["included"]; !ok {
+				v.Schema.Properties["included"] = SchemaOrRef{
+					Schema: &Schema{
+						Type: &ttype,
+						Items: &SchemaOrRef{
+							Schema: &Schema{},
+						},
+					},
+				}
+			}
+			for _, key := range refs.Index {
+				v.Schema.Properties["included"].Schema.Items.Schema.AnyOf = append(
+					v.Schema.Properties["included"].Schema.Items.Schema.AnyOf,
+					SchemaOrRef{
+						SchemaReference: &SchemaReference{Ref: refs.Refs[key]},
+					},
+				)
+			}
+		}
 	}
 }
 
