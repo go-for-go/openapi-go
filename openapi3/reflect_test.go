@@ -2,7 +2,6 @@ package openapi3_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -789,7 +788,6 @@ func TestReflector_jsonapi_simple(t *testing.T) {
 	require.NoError(t, r.SetJSONResponse(oc.Operation, new(req), http.StatusOK))
 	require.NoError(t, r.SpecEns().AddOperation(http.MethodGet, "/foo", *oc.Operation))
 	b, _ := r.Spec.MarshalYAML()
-	fmt.Println(string(b))
 	assert.YAMLEqf(t, `openapi: 3.0.3
 info:
   title: ""
@@ -802,11 +800,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap'
+                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap.Openapi3TestReq'
           description: OK
 components:
   schemas:
-    JsonschemaGoJsonApiWrap:
+    JsonschemaGoJsonApiWrap.Openapi3TestReq:
       properties:
         data:
           $ref: '#/components/schemas/Openapi3TestReq'
@@ -833,8 +831,7 @@ components:
         type:
           example: user
           type: string
-      type: object
-`, string(b), "")
+      type: object`, string(b), "")
 }
 
 func TestReflector_jsonapi_relation(t *testing.T) {
@@ -878,11 +875,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap'
+                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap.Openapi3TestBooksResponse'
           description: OK
 components:
   schemas:
-    JsonschemaGoJsonApiWrap:
+    JsonschemaGoJsonApiWrap.Openapi3TestBooksResponse:
       properties:
         data:
           $ref: '#/components/schemas/Openapi3TestBooksResponse'
