@@ -800,11 +800,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap.Openapi3TestReq'
+                $ref: '#/components/schemas/Data.Openapi3TestReq'
           description: OK
 components:
   schemas:
-    JsonschemaGoJsonApiWrap.Openapi3TestReq:
+    Data.Openapi3TestReq:
       properties:
         data:
           $ref: '#/components/schemas/Openapi3TestReq'
@@ -875,11 +875,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JsonschemaGoJsonApiWrap.Openapi3TestBooksResponse'
+                $ref: '#/components/schemas/Data.Openapi3TestBooksResponse'
           description: OK
 components:
   schemas:
-    JsonschemaGoJsonApiWrap.Openapi3TestBooksResponse:
+    Data.Openapi3TestBooksResponse:
       properties:
         data:
           $ref: '#/components/schemas/Openapi3TestBooksResponse'
