@@ -13,7 +13,7 @@ require (
 require (
 	github.com/bool64/shared v0.1.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-for-go/jsonschema-go v0.2.6 // indirect
+	github.com/go-for-go/jsonschema-go v0.2.7 // indirect
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
